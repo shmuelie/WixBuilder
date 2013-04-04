@@ -12,7 +12,6 @@ namespace WixBuilder
     /// </summary>
     public static class Program
     {
-        
         public static int Main(string[] args)
         {
             if (args == null)
@@ -152,7 +151,7 @@ namespace WixBuilder
                 byte[] bytes = new byte[16];
                 random.NextBytes(bytes);
                 guid = new Guid(bytes);
-            } while (!guids.Has(guid));
+            } while (guids.Has(guid));
             guids.Add(guid);
             return guid;
         }
