@@ -19,7 +19,7 @@ namespace WixBuilder
                 return -1;
             }
 
-            if (args.Length != 3)
+            if (args.Length < 3)
             {
                 return -2;
             }
@@ -69,15 +69,26 @@ namespace WixBuilder
                 if (temp == null)
                 {
                     temp = new XElement(XName.Get("Directory", wxsDocument.Root.Name.Namespace.NamespaceName), 
-                        new XAttribute(XName.Get("Name", wxsDocument.Root.Name.Namespace.NamespaceName), filePart), 
-                        new XAttribute(XName.Get("Id", wxsDocument.Root.Name.Namespace.NamespaceName), filePart.ToUpperInvariant().Replace(' ', '_')));
+                        new XAttribute("Name", filePart), 
+                        new XAttribute("Id", filePart.ToUpperInvariant().Replace(' ', '_')));
                     realElement.Add(temp);
                 }
                 realElement = temp;
             }
 
             UniqueCollection<string> componentIds = new UniqueCollection<string>();
+            foreach (string arg in args.Skip(3))
+            {
+                componentIds.Add(arg);
+            }
             ProcessFiles(realElement, realDirectory, guids, componentIds);
+
+            XElement xFeature = wxsDocument.Descendants(XName.Get("Feature", wxsDocument.Root.Name.Namespace.NamespaceName)).First();
+            xFeature.RemoveNodes();
+            foreach (string componentId in componentIds)
+            {
+                xFeature.Add(new XElement(XName.Get("ComponentRef", wxsDocument.Root.Name.Namespace.NamespaceName), new XAttribute("Id", componentId)));
+            }
 
             wxsDocument.Save(wxsFile);
 
@@ -94,13 +105,17 @@ namespace WixBuilder
                 XElement xComponent = parentElement.Element(XName.Get("Component", parentElement.Document.Root.Name.Namespace.NamespaceName));
                 if (xComponent == null)
                 {
-                    string componentId = GenerateId(componentIds, parentDirectory.Name);
+                    string componentId = GenerateId(componentIds, parentDirectory.Name + "Component");
                     Guid guid = GenerateGuid(guids);
                     xComponent = new XElement(XName.Get("Component", parentElement.Document.Root.Name.Namespace.NamespaceName),
-                        new XAttribute(XName.Get("DiskId", parentElement.Document.Root.Name.Namespace.NamespaceName), "1"),
-                        new XAttribute(XName.Get("Id", parentElement.Document.Root.Name.Namespace.NamespaceName), componentId),
-                        new XAttribute(XName.Get("Guid", parentElement.Document.Root.Name.Namespace.NamespaceName), guid));
+                        new XAttribute("DiskId", "1"),
+                        new XAttribute("Id", componentId),
+                        new XAttribute("Guid", guid));
                     parentElement.Add(xComponent);
+                }
+                else
+                {
+                    componentIds.Add(xComponent.Attribute("Id").Value);
                 }
                 xComponent.RemoveNodes();
                 xComponent.Add(files.Select((fileInfo) =>
@@ -123,8 +138,8 @@ namespace WixBuilder
                 if (xDirectory == null)
                 {
                     xDirectory = new XElement(XName.Get("Directory", parentElement.Document.Root.Name.Namespace.NamespaceName),
-                        new XAttribute(XName.Get("Name", parentElement.Document.Root.Name.Namespace.NamespaceName), directory.Name),
-                        new XAttribute(XName.Get("Id", parentElement.Document.Root.Name.Namespace.NamespaceName), directory.Name.ToUpperInvariant().Replace(' ', '_')));
+                        new XAttribute("Name", directory.Name),
+                        new XAttribute("Id", directory.Name.ToUpperInvariant().Replace(' ', '_')));
                     parentElement.Add(xDirectory);
                 }
                 ProcessFiles(xDirectory, directory, guids, componentIds);
@@ -133,7 +148,7 @@ namespace WixBuilder
 
         private static string GenerateId(UniqueCollection<string> componentIds, string componentBaseId)
         {
-            string componentId = componentBaseId;
+            string componentId = componentBaseId.ToUpperInvariant();
             for (int componentIndex = 1; componentIds.Has(componentId); componentIndex++)
             {
                 componentId = componentBaseId + componentIndex.ToString(CultureInfo.InvariantCulture);
