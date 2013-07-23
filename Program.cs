@@ -24,9 +24,11 @@ namespace WixBuilder
                 return -2;
             }
 
-            string wxsFile = args[0];
-            string realFolder = args[1];
-            string wixFolder = args[2];
+            List<string> arguments = new List<string>(args);
+
+            string wxsFile = arguments[0];
+            string realFolder = arguments[1];
+            string wixFolder = arguments[2];
 
             Console.WriteLine("Updating WXS file '{0}' at folder '{1}' from '{2}'", wxsFile, wixFolder, realFolder);
 
@@ -34,9 +36,13 @@ namespace WixBuilder
             DirectoryInfo realDirectory = new DirectoryInfo(realFolder);
             UniqueCollection<Guid> guids = new UniqueCollection<Guid>();
 
-            XAttribute xProductId = wxsDocument.Descendants(XName.Get("Product", wxsDocument.Root.Name.Namespace.NamespaceName)).First().Attribute("Id");
-            guids.Add(new Guid(xProductId.Value));
-            xProductId.Value = GenerateGuid(guids).ToString().ToUpper();
+            if (arguments[3] == "-repalceProduct")
+            {
+                XAttribute xProductId = wxsDocument.Descendants(XName.Get("Product", wxsDocument.Root.Name.Namespace.NamespaceName)).First().Attribute("Id");
+                guids.Add(new Guid(xProductId.Value));
+                xProductId.Value = GenerateGuid(guids).ToString().ToUpper();
+                arguments.RemoveAt(3);
+            }
 
             XElement pfFiles = wxsDocument.Descendants(XName.Get("Directory", wxsDocument.Root.Name.Namespace.NamespaceName)).First((xElement) =>
                 {
@@ -82,7 +88,7 @@ namespace WixBuilder
             }
 
             UniqueCollection<string> componentIds = new UniqueCollection<string>();
-            foreach (string arg in args.Skip(3))
+            foreach (string arg in arguments.Skip(3))
             {
                 componentIds.Add(arg);
             }
