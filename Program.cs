@@ -33,6 +33,11 @@ namespace WixBuilder
             XDocument wxsDocument = XDocument.Load(wxsFile);
             DirectoryInfo realDirectory = new DirectoryInfo(realFolder);
             UniqueCollection<Guid> guids = new UniqueCollection<Guid>();
+
+            XAttribute xProductId = wxsDocument.Descendants(XName.Get("Product", wxsDocument.Root.Name.Namespace.NamespaceName)).First().Attribute("Id");
+            guids.Add(new Guid(xProductId.Value));
+            xProductId.Value = GenerateGuid(guids).ToString().ToUpper();
+
             XElement pfFiles = wxsDocument.Descendants(XName.Get("Directory", wxsDocument.Root.Name.Namespace.NamespaceName)).First((xElement) =>
                 {
                     XAttribute xId = xElement.Attribute("Id");
