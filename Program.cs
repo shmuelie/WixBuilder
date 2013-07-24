@@ -110,29 +110,37 @@ namespace WixBuilder
 
         private static void ProcessFiles(XElement parentElement, DirectoryInfo parentDirectory, UniqueCollection<Guid> guids, UniqueCollection<string> componentIds)
         {
-            List<FileInfo> files = new List<FileInfo>(parentDirectory.GetFiles());
-            if (files.Count > 0)
+            List<XElement> xComponents = new List<XElement>();
+            foreach (FileInfo fileInfo in parentDirectory.GetFiles())
             {
-                XElement xComponent = parentElement.Element(XName.Get("Component", parentElement.Document.Root.Name.Namespace.NamespaceName));
+                XElement xComponent = parentElement.Elements(XName.Get("Component", parentElement.Document.Root.Name.Namespace.NamespaceName)).FirstOrDefault((component) =>
+                    {
+                        return component.Element(XName.Get("File", parentElement.Document.Root.Name.Namespace.NamespaceName)).Attribute("Source").Value == fileInfo.FullName;
+                    });
                 if (xComponent == null)
                 {
-                    string componentId = GenerateId(componentIds, parentDirectory.Name + "Component");
+                    string componentId = GenerateId(componentIds, string.Format(CultureInfo.InvariantCulture, "{0}_{1}Component", parentDirectory.Name, fileInfo.Name));
                     Guid guid = GenerateGuid(guids);
                     xComponent = new XElement(XName.Get("Component", parentElement.Document.Root.Name.Namespace.NamespaceName),
                         new XAttribute("DiskId", "1"),
                         new XAttribute("Id", componentId),
                         new XAttribute("Guid", guid));
                     parentElement.Add(xComponent);
+                    xComponent.Add(new XElement(XName.Get("File", parentElement.Document.Root.Name.Namespace.NamespaceName), new XAttribute("Id", fileInfo.Name.ToUpperInvariant()), new XAttribute("Name", fileInfo.Name), new XAttribute("Source", fileInfo.FullName)));
                 }
                 else
                 {
                     componentIds.Add(xComponent.Attribute("Id").Value);
                 }
-                xComponent.RemoveNodes();
-                xComponent.Add(files.Select((fileInfo) =>
-                    {
-                        return new XElement(XName.Get("File", parentElement.Document.Root.Name.Namespace.NamespaceName), new XAttribute("Id", fileInfo.Name.ToUpperInvariant()), new XAttribute("Name", fileInfo.Name), new XAttribute("Source", fileInfo.FullName));
-                    }).ToArray());
+                xComponents.Add(xComponent);
+            }
+            foreach (XElement xComponent in parentElement.Elements(XName.Get("Component", parentElement.Document.Root.Name.Namespace.NamespaceName)))
+            {
+                if (xComponents.Contains(xComponent))
+                {
+                    continue;
+                }
+                xComponent.Remove();
             }
 
             foreach (DirectoryInfo directory in parentDirectory.GetDirectories())
