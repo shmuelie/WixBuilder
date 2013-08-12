@@ -29,6 +29,7 @@ namespace WixBuilder
             string wxsFile = arguments[0];
             string realFolder = arguments[1];
             string wixFolder = arguments[2];
+            Uri wixFileFolder = new Uri(Path.GetDirectoryName(wxsFile) + Path.DirectorySeparatorChar);
 
             Console.WriteLine("Updating WXS file '{0}' at folder '{1}' from '{2}'", wxsFile, wixFolder, realFolder);
 
@@ -92,7 +93,7 @@ namespace WixBuilder
             {
                 componentIds.Add(arg);
             }
-            ProcessFiles(realElement, realDirectory, guids, componentIds);
+            ProcessFiles(realElement, realDirectory, guids, componentIds, wixFileFolder);
 
             XElement xFeature = wxsDocument.Descendants(XName.Get("Feature", wxsDocument.Root.Name.Namespace.NamespaceName)).First();
             xFeature.RemoveNodes();
@@ -108,7 +109,7 @@ namespace WixBuilder
             return 0;
         }
 
-        private static void ProcessFiles(XElement parentElement, DirectoryInfo parentDirectory, UniqueCollection<Guid> guids, UniqueCollection<string> componentIds)
+        private static void ProcessFiles(XElement parentElement, DirectoryInfo parentDirectory, UniqueCollection<Guid> guids, UniqueCollection<string> componentIds, Uri wixFileFolder)
         {
             List<XElement> xComponents = new List<XElement>();
             foreach (FileInfo fileInfo in parentDirectory.GetFiles())
@@ -126,7 +127,9 @@ namespace WixBuilder
                         new XAttribute("Id", componentId),
                         new XAttribute("Guid", guid));
                     parentElement.Add(xComponent);
-                    xComponent.Add(new XElement(XName.Get("File", parentElement.Document.Root.Name.Namespace.NamespaceName), new XAttribute("Id", fileInfo.Name.ToUpperInvariant()), new XAttribute("Name", fileInfo.Name), new XAttribute("Source", fileInfo.FullName)));
+                    Uri fileUri = new Uri(fileInfo.FullName);
+                    Uri relativePath = wixFileFolder.MakeRelativeUri(fileUri);
+                    xComponent.Add(new XElement(XName.Get("File", parentElement.Document.Root.Name.Namespace.NamespaceName), new XAttribute("Id", fileInfo.Name.ToUpperInvariant()), new XAttribute("Name", fileInfo.Name), new XAttribute("Source", Uri.UnescapeDataString(relativePath.ToString().Replace('/', Path.DirectorySeparatorChar)))));
                 }
                 else
                 {
@@ -161,7 +164,7 @@ namespace WixBuilder
                         new XAttribute("Id", directory.Name.ToUpperInvariant().Replace(' ', '_')));
                     parentElement.Add(xDirectory);
                 }
-                ProcessFiles(xDirectory, directory, guids, componentIds);
+                ProcessFiles(xDirectory, directory, guids, componentIds, wixFileFolder);
             }
         }
 
