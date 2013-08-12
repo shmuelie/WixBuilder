@@ -116,7 +116,7 @@ namespace WixBuilder
             {
                 XElement xComponent = parentElement.Elements(XName.Get("Component", parentElement.Document.Root.Name.Namespace.NamespaceName)).FirstOrDefault((component) =>
                     {
-                        return component.Element(XName.Get("File", parentElement.Document.Root.Name.Namespace.NamespaceName)).Attribute("Source").Value == fileInfo.FullName;
+                        return component.Element(XName.Get("File", parentElement.Document.Root.Name.Namespace.NamespaceName)).Attribute("Source").Value == GetRelativePath(wixFileFolder, fileInfo);
                     });
                 if (xComponent == null)
                 {
@@ -127,9 +127,7 @@ namespace WixBuilder
                         new XAttribute("Id", componentId),
                         new XAttribute("Guid", guid));
                     parentElement.Add(xComponent);
-                    Uri fileUri = new Uri(fileInfo.FullName);
-                    Uri relativePath = wixFileFolder.MakeRelativeUri(fileUri);
-                    xComponent.Add(new XElement(XName.Get("File", parentElement.Document.Root.Name.Namespace.NamespaceName), new XAttribute("Id", fileInfo.Name.ToUpperInvariant()), new XAttribute("Name", fileInfo.Name), new XAttribute("Source", Uri.UnescapeDataString(relativePath.ToString().Replace('/', Path.DirectorySeparatorChar)))));
+                    xComponent.Add(new XElement(XName.Get("File", parentElement.Document.Root.Name.Namespace.NamespaceName), new XAttribute("Id", fileInfo.Name.ToUpperInvariant()), new XAttribute("Name", fileInfo.Name), new XAttribute("Source", GetRelativePath(wixFileFolder, fileInfo))));
                 }
                 else
                 {
@@ -166,6 +164,13 @@ namespace WixBuilder
                 }
                 ProcessFiles(xDirectory, directory, guids, componentIds, wixFileFolder);
             }
+        }
+
+        private static string GetRelativePath(Uri wixFileFolder, FileInfo fileInfo)
+        {
+            Uri fileUri = new Uri(fileInfo.FullName);
+            Uri relativePath = wixFileFolder.MakeRelativeUri(fileUri);
+            return Uri.UnescapeDataString(relativePath.ToString().Replace('/', Path.DirectorySeparatorChar));
         }
 
         private static string GenerateId(UniqueCollection<string> componentIds, string componentBaseId)
