@@ -114,9 +114,10 @@ namespace WixBuilder
             List<XElement> xComponents = new List<XElement>();
             foreach (FileInfo fileInfo in parentDirectory.GetFiles())
             {
+                string relativePath = GetRelativePath(wixFileFolder, fileInfo);
                 XElement xComponent = parentElement.Elements(XName.Get("Component", parentElement.Document.Root.Name.Namespace.NamespaceName)).FirstOrDefault((component) =>
                     {
-                        return component.Element(XName.Get("File", parentElement.Document.Root.Name.Namespace.NamespaceName)).Attribute("Source").Value == GetRelativePath(wixFileFolder, fileInfo);
+                        return component.Element(XName.Get("File", parentElement.Document.Root.Name.Namespace.NamespaceName)).Attribute("Source").Value == relativePath;
                     });
                 if (xComponent == null)
                 {
@@ -127,7 +128,7 @@ namespace WixBuilder
                         new XAttribute("Id", componentId),
                         new XAttribute("Guid", guid));
                     parentElement.Add(xComponent);
-                    xComponent.Add(new XElement(XName.Get("File", parentElement.Document.Root.Name.Namespace.NamespaceName), new XAttribute("Id", fileInfo.Name.ToUpperInvariant()), new XAttribute("Name", fileInfo.Name), new XAttribute("Source", GetRelativePath(wixFileFolder, fileInfo))));
+                    xComponent.Add(new XElement(XName.Get("File", parentElement.Document.Root.Name.Namespace.NamespaceName), new XAttribute("Id", fileInfo.Name.ToUpperInvariant()), new XAttribute("Name", fileInfo.Name), new XAttribute("Source", relativePath)));
                 }
                 else
                 {
